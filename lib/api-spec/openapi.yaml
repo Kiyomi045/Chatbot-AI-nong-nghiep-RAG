@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: agriculture
+    description: Agriculture knowledge and RAG chat
 paths:
   /healthz:
     get:
@@ -24,6 +26,103 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /agriculture/status:
+    get:
+      operationId: getAgricultureStatus
+      tags: [agriculture]
+      summary: Get agriculture assistant status
+      responses:
+        "200":
+          description: Current vector store and model status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgricultureStatus"
+  /agriculture/documents:
+    get:
+      operationId: listAgricultureDocuments
+      tags: [agriculture]
+      summary: List knowledge documents
+      responses:
+        "200":
+          description: Knowledge documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AgricultureDocument"
+    post:
+      operationId: addAgricultureDocument
+      tags: [agriculture]
+      summary: Add a knowledge document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgricultureDocumentInput"
+      responses:
+        "201":
+          description: Indexed document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgricultureDocument"
+        "400":
+          description: Invalid document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /agriculture/documents/{documentId}:
+    delete:
+      operationId: deleteAgricultureDocument
+      tags: [agriculture]
+      summary: Delete a knowledge document and its indexed chunks
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deletion result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteDocumentResult"
+        "404":
+          description: Document not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /agriculture/chat:
+    post:
+      operationId: askAgricultureQuestion
+      tags: [agriculture]
+      summary: Ask an agriculture question using RAG
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgricultureQuestionInput"
+      responses:
+        "200":
+          description: Answer grounded in retrieved knowledge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgricultureAnswer"
+        "400":
+          description: Invalid question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +132,150 @@ components:
           type: string
       required:
         - status
+    AgricultureStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ready, empty, degraded]
+        documentCount:
+          type: integer
+        chunkCount:
+          type: integer
+        geminiConfigured:
+          type: boolean
+        vectorStore:
+          type: string
+        embeddingModel:
+          type: string
+      required:
+        - status
+        - documentCount
+        - chunkCount
+        - geminiConfigured
+        - vectorStore
+        - embeddingModel
+    AgricultureDocument:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        category:
+          type: string
+          enum: [crop, pest, soil, irrigation, general]
+        source:
+          type: string
+        contentPreview:
+          type: string
+        chunkCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - category
+        - source
+        - contentPreview
+        - chunkCount
+        - createdAt
+    AgricultureDocumentInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 2
+          maxLength: 160
+        category:
+          type: string
+          enum: [crop, pest, soil, irrigation, general]
+        source:
+          type: string
+          maxLength: 240
+        content:
+          type: string
+          minLength: 40
+          maxLength: 40000
+      required:
+        - title
+        - category
+        - content
+    AgricultureQuestionInput:
+      type: object
+      properties:
+        question:
+          type: string
+          minLength: 4
+          maxLength: 2000
+        crop:
+          type: string
+          maxLength: 80
+        location:
+          type: string
+          maxLength: 120
+      required:
+        - question
+    AgricultureCitation:
+      type: object
+      properties:
+        documentId:
+          type: string
+        title:
+          type: string
+        source:
+          type: string
+        category:
+          type: string
+          enum: [crop, pest, soil, irrigation, general]
+        excerpt:
+          type: string
+        score:
+          type: number
+      required:
+        - documentId
+        - title
+        - source
+        - category
+        - excerpt
+        - score
+    AgricultureAnswer:
+      type: object
+      properties:
+        answer:
+          type: string
+        citations:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgricultureCitation"
+        confidence:
+          type: string
+          enum: [high, medium, low]
+        mode:
+          type: string
+          enum: [retrieval, gemini]
+      required:
+        - answer
+        - citations
+        - confidence
+        - mode
+    DeleteDocumentResult:
+      type: object
+      properties:
+        id:
+          type: string
+        deleted:
+          type: boolean
+      required:
+        - id
+        - deleted
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
 

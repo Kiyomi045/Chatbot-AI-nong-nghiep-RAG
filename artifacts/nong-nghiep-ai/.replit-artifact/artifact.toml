@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Trợ lý Nông nghiệp AI"
+description = "Chatbot RAG tiếng Việt dành cho nông dân: trả lời câu hỏi về mùa vụ, sâu bệnh và chăm sóc cây trồng dựa trên tài liệu tri thức có nguồn trích dẫn, kèm khả năng quản lý tài liệu."
+version = "1.0.0"
+id = "artifacts/nong-nghiep-ai"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19946
+
+[services.development]
+run = "pnpm --filter @workspace/nong-nghiep-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/nong-nghiep-ai", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/nong-nghiep-ai/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19946"
+BASE_PATH = "/"
